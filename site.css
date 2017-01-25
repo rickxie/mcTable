@@ -80,3 +80,12 @@
   overflow: auto;
   height: 100%;
 }
+.mc-table .mc-table-wrapper .mc-fixed-column {
+  z-index: 1;
+}
+.mc-table .mc-table-wrapper .mc-fixed-column,
+.mc-table .mc-table-wrapper .mc-fixed-body {
+  top: 0;
+  left: 0;
+  position: absolute;
+}

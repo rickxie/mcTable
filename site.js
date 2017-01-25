@@ -6,7 +6,7 @@ var mcGrid = mmGrid = this;
 var _ = mcGrid._ = {};
 
 var defaultClassName = {table: '', tr: null, td: null};
-var defaultConfig = {checkable: false, sortable: false, tableWidth : '', fixHeaderRow: true};
+var defaultConfig = {checkable: false, sortable: false, tableWidth : '', fixHeaderRow: true, fixColumnNum: 0};
 var defColConfig = [];
 
 mcGrid.InitGrid = function (tableId, config, col, data) {
@@ -19,19 +19,20 @@ mcGrid.InitGrid = function (tableId, config, col, data) {
     parentDom.className.replace('mc-table', '');
     parentDom.className += 'mc-table';
     var wrapPart = {
+        wraperTable: createDom('div', 'mc-table-wrapper mc-default'),
         headDivDom: createDom('div', 'mc-thead'),
         bodyDivDom: createDom('div', 'mc-tbody'),
-        tfootTable: createDom('div', 'mc-tfoot')
+        fixedColumn: createDom('div', 'mc-fixed-column'),
+        fixedBody: createDom('div', 'mc-fixed-body')
     }
-    var wraperTable = createDom('div', 'mc-table-wrapper mc-default');
+    var wraperTable = wrapPart.wraperTable;
     var theadTxt = buildTheader(defColConfig);
     //var headTable = createElement('table', theadTxt, defaultClassName.table);
     var tbodyTxt = buildTbody(defColConfig, data);
     var bodyTable = createElement('table', theadTxt + tbodyTxt, defaultClassName.table, { width: defaultConfig.tableWidth});
     //var tableTxt = buildTable(defColConfig, data);
     wrapPart.bodyDivDom.innerHTML = bodyTable;
-    wraperTable.appendChild(wrapPart.headDivDom);
-    wraperTable.appendChild(wrapPart.bodyDivDom);
+    appendStragy(wrapPart);
     parentDom.innerHTML = '';
     wraperTable.style.visibility = "hidden";
     parentDom.appendChild(wraperTable);
@@ -40,7 +41,19 @@ mcGrid.InitGrid = function (tableId, config, col, data) {
         frozenRowColumn(parentDom, wrapPart.bodyDivDom, wrapPart.headDivDom);
     },0);
 }
+var appendStragy = function( wrapPart){
+    if(defaultConfig.fixHeaderRow && defaultConfig.fixColumnNum > 0){
+        wrapPart.fixedBody.appendChild(wrapPart.headDivDom);
+        wrapPart.fixedBody.appendChild(wrapPart.bodyDivDom);
+        wrapPart.wraperTable.appendChild(wrapPart.fixedColumn);
+        wrapPart.wraperTable.appendChild(wrapPart.fixedBody);
+    }else if(defaultConfig.fixHeaderRow && defaultConfig.fixColumnNum == 0){
+        wrapPart.wraperTable.appendChild(wrapPart.headDivDom);
+        wrapPart.wraperTable.appendChild(wrapPart.bodyDivDom);
+    }else if(!defaultConfig.fixHeaderRow){
 
+    }
+}
 var frozenRowColumn = function(parentDom, bodyDivDom, headDivDom) {
     if (defaultConfig.fixHeaderRow) {
         var bodyDivDomTable = bodyDivDom.children[0];
