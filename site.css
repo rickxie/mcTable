@@ -17,7 +17,6 @@
 }
 .mc-table .table {
   font-size: 12px;
-  background-color: transparent;
   margin-bottom: 20px;
   margin: 0;
   padding: 0;
@@ -28,6 +27,7 @@
   padding: 8px;
   line-height: 14px;
   word-break: break-word;
+  background-color: white;
 }
 .mc-table .table > thead > tr > th {
   background-color: #f1f1f1;
@@ -79,4 +79,17 @@
 .mc-table .mc-table-wrapper .mc-tbody {
   overflow: auto;
   height: 100%;
+}
+.mc-table .mc-table-wrapper .mc-fixed-column {
+  z-index: 1;
+}
+.mc-table .mc-table-wrapper .mc-fixed-column,
+.mc-table .mc-table-wrapper .mc-fixed-body {
+  top: 0;
+  left: 0;
+  position: absolute;
+}
+.mc-table .mc-table-wrapper .table > tbody > tr.hover > td,
+.mc-table .mc-table-wrapper .table > tbody > tr > td.col-hover {
+  background-color: #ebf2f9;
 }

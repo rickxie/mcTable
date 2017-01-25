@@ -6,7 +6,7 @@ var mcGrid = mmGrid = this;
 var _ = mcGrid._ = {};
 
 var defaultClassName = {table: '', tr: null, td: null};
-var defaultConfig = {checkable: false, sortable: false, tableWidth : '', fixHeaderRow: true};
+var defaultConfig = {checkable: false, sortable: false, tableWidth : '', fixHeaderRow: true, fixColumnNum: 0};
 var defColConfig = [];
 
 mcGrid.InitGrid = function (tableId, config, col, data) {
@@ -19,29 +19,44 @@ mcGrid.InitGrid = function (tableId, config, col, data) {
     parentDom.className.replace('mc-table', '');
     parentDom.className += 'mc-table';
     var wrapPart = {
+        wraperContainer: createDom('div', 'mc-table-wrapper mc-default'),
         headDivDom: createDom('div', 'mc-thead'),
         bodyDivDom: createDom('div', 'mc-tbody'),
-        tfootTable: createDom('div', 'mc-tfoot')
+        fixedColumn: createDom('div', 'mc-fixed-column'),
+        fixedBody: createDom('div', 'mc-fixed-body')
     }
-    var wraperTable = createDom('div', 'mc-table-wrapper mc-default');
+    var wraperTable = wrapPart.wraperContainer;
     var theadTxt = buildTheader(defColConfig);
     //var headTable = createElement('table', theadTxt, defaultClassName.table);
     var tbodyTxt = buildTbody(defColConfig, data);
     var bodyTable = createElement('table', theadTxt + tbodyTxt, defaultClassName.table, { width: defaultConfig.tableWidth});
     //var tableTxt = buildTable(defColConfig, data);
     wrapPart.bodyDivDom.innerHTML = bodyTable;
-    wraperTable.appendChild(wrapPart.headDivDom);
-    wraperTable.appendChild(wrapPart.bodyDivDom);
+    appendStragy(wrapPart);
     parentDom.innerHTML = '';
     wraperTable.style.visibility = "hidden";
     parentDom.appendChild(wraperTable);
     setTimeout( function(){
         wraperTable.style.visibility = "visible";
-        frozenRowColumn(parentDom, wrapPart.bodyDivDom, wrapPart.headDivDom);
+        frozenRowColumn(parentDom, wrapPart);
     },0);
 }
-
-var frozenRowColumn = function(parentDom, bodyDivDom, headDivDom) {
+var appendStragy = function( wrapPart){
+    if(defaultConfig.fixHeaderRow && defaultConfig.fixColumnNum > 0){
+        wrapPart.fixedBody.appendChild(wrapPart.headDivDom);
+        wrapPart.fixedBody.appendChild(wrapPart.bodyDivDom);
+        wrapPart.wraperContainer.appendChild(wrapPart.fixedColumn);
+        wrapPart.wraperContainer.appendChild(wrapPart.fixedBody);
+    }else if(defaultConfig.fixHeaderRow && defaultConfig.fixColumnNum == 0){
+        wrapPart.wraperContainer.appendChild(wrapPart.headDivDom);
+        wrapPart.wraperContainer.appendChild(wrapPart.bodyDivDom);
+    }else if(!defaultConfig.fixHeaderRow){
+        wrapPart.wraperContainer.appendChild(wrapPart.bodyDivDom);
+    }
+}
+var frozenRowColumn = function(parentDom, wrapPart) {
+    var headDivDom = wrapPart.headDivDom;
+    var bodyDivDom = wrapPart.bodyDivDom;
     if (defaultConfig.fixHeaderRow) {
         var bodyDivDomTable = bodyDivDom.children[0];
         var headerHeight = bodyDivDomTable.children[0].offsetHeight;
@@ -54,14 +69,72 @@ var frozenRowColumn = function(parentDom, bodyDivDom, headDivDom) {
         bodyDivDomTable.removeChild(bodyDivDomTable.children[0]);
         headDivDom.appendChild(headDivDomTable);
 
-        bodyDivDom.style.height = bodyHeight + "px";
+        bodyDivDom.style.height = bodyHeight;
         var tempWidth = bodyDivDom.offsetWidth > bodyDivDomTable.offsetWidth ? bodyDivDom.offsetWidth : bodyDivDomTable.offsetWidth;
-        bodyDivDomTable.style.width = (tempWidth - 20) + "px";
-        headDivDomTable.style.width = tempWidth + "px";
-        bodyDivDom['onscroll'] = function (i) {
-            headDivDom.scrollLeft = this.scrollLeft;
-        };
+        bodyDivDomTable.style.width = (tempWidth - 20);
+        headDivDomTable.style.width = tempWidth;
     }
+
+    if(defaultConfig.fixColumnNum > 0){
+        var middleFixedTheadDom = parentDom.querySelector('.mc-fixed-body .mc-thead');
+        var middleFixedTbodyDom = parentDom.querySelector('.mc-fixed-body .mc-tbody');
+        var middleFixedHeadTable = middleFixedTheadDom.querySelector('table');
+        var middleFixedBodyTable = middleFixedTbodyDom.querySelector('table');
+        middleFixedTbodyDom.style.width = parentDom.offsetWidth + "px";
+        var mcFixedColumnThead = middleFixedTheadDom.cloneNode(true);
+        var mcFixedColumnTbody = middleFixedTbodyDom.cloneNode(true);
+        var headTable = mcFixedColumnThead.querySelector('table');
+        var bodyTable = mcFixedColumnTbody.querySelector('table');
+
+        //重组左侧头部
+        var trs = headTable.rows;
+        _.forEach(trs, function(item, j){
+            for(var i = 0; i < item.cells.length; i++){
+                if(i >= defaultConfig.fixColumnNum){
+                    item.cells[i].style.display = "none";
+                }else{
+                    item.cells[i].style.width = middleFixedHeadTable.rows[j].cells[i].offsetWidth;
+                    item.cells[i].style.height = middleFixedHeadTable.rows[j].cells[i].offsetHeight;
+                }
+            }
+        })
+        //重组左侧身体
+        var trs = bodyTable.rows;
+        _.forEach(trs, function(item, j){
+            for(var i = 0; i < item.cells.length; i++){
+                if(i >= defaultConfig.fixColumnNum){
+                    item.cells[i].style.display = "none";
+                }else{
+                    item.cells[i].style.width = middleFixedBodyTable.rows[j].cells[i].offsetWidth;
+                    item.cells[i].style.height = middleFixedBodyTable.rows[j].cells[i].offsetHeight;
+                }
+            }
+        })
+        var columnDom = parentDom.querySelector('.mc-fixed-column');
+        headTable.style.width = null;
+        bodyTable.style.width = null;
+        mcFixedColumnTbody.style.width = null;
+        wrapPart.fixedBody.style.width = middleFixedTbodyDom.offsetWidth;
+        mcFixedColumnTbody.style.height = middleFixedTbodyDom.clientHeight;
+        columnDom.appendChild(mcFixedColumnThead);
+        columnDom.appendChild(mcFixedColumnTbody);
+    }
+
+
+
+    //滚动条配置
+    bodyDivDom['onscroll'] = function (i) {
+
+        headDivDom.scrollLeft = this.scrollLeft;
+        if(defaultConfig.fixColumnNum > 0){
+            //var columnDom = parentDom.querySelector('.mc-fixed-column');
+            //columnDom.left = this.scrollLeft;
+            var fixedColumnBodyTable = wrapPart.fixedColumn.querySelector('.mc-tbody table')
+            fixedColumnBodyTable.style.marginTop = -this.scrollTop;
+        }
+    };
+
+
 }
 
 
@@ -105,18 +178,18 @@ var buildTable = function (cols, data) {
 //构建表格头部
 var buildTheader = function (cols) {
     var thDomList = [];
-    _.forEach(defColConfig, function (item) {
+    _.forEach(defColConfig, function (item, ci) {
         if(item.visible)
-            thDomList.push(createElement('th', item.text, null, item));
+            thDomList.push(createElement('th', item.text, null, item, 0, ci));
     })
     if (defaultConfig.checkable) {
-        var checkBoxTxt = createElement('th', "<input type='checkbox'/>", 'check-all check-btn');
+        var checkBoxTxt = createElement('th', "<input type='checkbox'/>", 'check-all check-btn',null, 0, -1);
         thDomList.unshift(checkBoxTxt);
     }
-    var tableHeadDom = createElement('thead', thDomList.join(''));
+    var trDom = createElement('tr', thDomList.join(''), null, null, 0)
+    var tableHeadDom = createElement('thead', trDom);
     return tableHeadDom;
 }
-
 //获取列配置的 样式
 var getStyle = function (col) {
     var styleStr = [];
@@ -130,32 +203,34 @@ var getStyle = function (col) {
     return styleStr.join(';');
 }
 //创建Element 文本
-var createElement = function (element, content, cls, styleConfig) {
+var createElement = function (element, content, cls, styleConfig, ri, ci) {
             var cls = cls != null ? ' class = "' + cls + '"' : '';
             var style = '';
             if (styleConfig != null) {
                 style = getStyle(styleConfig);
                 style = style != null ? ' style = "' + style + '"' : '';
             }
-            var eleDom = '<' + element + cls + style + '>' + content + '</' + element + '>';
+            (ci!== undefined && (ci =' ci="'+ci+'" ')) || (ci === undefined && (ci = ''));
+            (ri!== undefined && (ri =' ri="'+ri+'" ')) || (ri === undefined && (ri = ''));
+            var eleDom = '<' + element + cls + ri + ci + style + '>' + content + '</' + element + '>';
             return eleDom;
         }
 //构建表格数据
 var buildTbody = function (cols, rows) {
     var tdDomList = [];
     var trDomList = [];
-    _.forEach(rows, function (r) {
+    _.forEach(rows, function (r, ri) {
         tdDomList = [];
-        _.forEach(defColConfig, function (item) {
+        _.forEach(defColConfig, function (item, ci) {
             if(item.visible)
-            tdDomList.push(createElement('td', r[item.name], null, item));
+            tdDomList.push(createElement('td', r[item.name], null, item, ri+1, ci));
         })
         if (defaultConfig.checkable) {
-            var checkBoxTxt = createElement('td', "<input type='checkbox'/>", 'check-btn')
+            var checkBoxTxt = createElement('td', "<input type='checkbox'/>", 'check-btn', null,  ri+1, -1)
             tdDomList.unshift(checkBoxTxt);
         }
-        trDomList.push(createElement('tr', tdDomList.join('')));
-    })
+        trDomList.push(createElement('tr', tdDomList.join(''), null, null, ri+1));
+    });
     var tableBodyDom = createElement('tbody', trDomList.join(''));
     return tableBodyDom;
 }
@@ -163,7 +238,7 @@ var buildTbody = function (cols, rows) {
 _.forEach = function (arr, func) {
     var i = 0;
     for (i = 0; i < arr.length; i++) {
-        func(arr[i]);
+        func(arr[i], i);
     }
 }
 _.filter = function (arr, func) {
@@ -260,7 +335,6 @@ _.clone = function(obj) {
         {name: 'money', text: "金额", width: '100px', 'text-align': 'right'},
         {name: 'birthDay', text: "出生日期", width: '100px', visible: true},
     ];
-
     var data = [
         {id: '1111', name: '小明', address: '漕河泾250号', money: 100, birthDay: '2015-12-12'},
         {id: '2222', name: '小红', address: '新传公路1550号', money: 2005, birthDay: '2015-12-12'},
@@ -272,7 +346,7 @@ _.clone = function(obj) {
 
     var a = new Date();
     var g = new mcGrid();
-    g.InitGrid('mc-table', {checkable: true, fixHeaderRow: true}, col, data);
+    g.InitGrid('mc-table', {checkable: true, fixHeaderRow: true, fixColumnNum: 1 }, col, data);
     var b = new Date();
     console.log('耗时:' + (b - a) + '毫秒');
 };
