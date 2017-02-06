@@ -2,6 +2,7 @@
 @cell-padding: 8px;
 @oddRowColor: #f9f9f9;
 @rowHover: #ebf2f9;
+@rowChecked: #ffe7bc;
 @active-bg: #ffe7bc;
 @active-border: #ffe7bc;
 @success-bg: #ddf4df;
@@ -96,7 +97,10 @@
     }
 
     .table>tbody>tr.hover>td, .table>tbody>tr>td.col-hover {
-      background-color: #ebf2f9;
+      background-color: @rowHover;
+    }
+    .table>tbody>tr.checked>td {
+      background-color: @rowChecked;
     }
   }
 

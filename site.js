@@ -4,20 +4,45 @@ window.onload = function() {
 function mcGrid() {
 var mcGrid = mmGrid = this;
 var _ = mcGrid._ = {};
+    var $eventStore = { 'row_select' : []};
+    mcGrid.fire = function(eventName){
+        switch(eventName){
+            case 'row_select': {
+                $eventStore['row_select'].forEach(function(func){
+                    var filteredData = bindingData.filter(function(item){ return item.$$checked === true;});
+                    func(filteredData);
+                })
+            }
+        }
+    }
+    mcGrid.on = function(eventName,func){
+        $eventStore[eventName] !== null && ( $eventStore[eventName].push(func))    }
 
+//配置全局对象
 var defaultClassName = {table: '', tr: null, td: null};
-var defaultConfig = {checkable: false, sortable: false, tableWidth : '', fixHeaderRow: true, fixColumnNum: 0};
+var defaultConfig = {
+    $$allChecked: false,
+    checkable: false, //是否显示复选框
+    sortable: false, //是否可以排序
+    tableWidth : '', //表格宽度
+    fixHeaderRow: true, //固定标题行
+    fixColumnNum: 0,    //固定前几列
+    mergeColumnMainIndex: null, //需要合并的判断列
+    mergeColumns: null //需要合并的列的集合
+};
 var defColConfig = [];
-
+var bindingData = [];
 mcGrid.InitGrid = function (tableId, config, col, data) {
     defColConfig = col;
+    processingData(data);
     processingConfig(config);
+
     var parentDom = document.getElementById(tableId);
 
     //获取原始Class
     defaultClassName.table = _.getDefaultClass('#' + tableId + ' table');
-    parentDom.className.replace('mc-table', '');
-    parentDom.className += 'mc-table';
+    parentDom.removeClass('mc-table');
+    parentDom.addClass('mc-table');
     var wrapPart = {
         wraperContainer: createDom('div', 'mc-table-wrapper mc-default'),
         headDivDom: createDom('div', 'mc-thead'),
@@ -37,10 +62,11 @@ mcGrid.InitGrid = function (tableId, config, col, data) {
     wraperTable.style.visibility = "hidden";
     parentDom.appendChild(wraperTable);
     setTimeout( function(){
-        wraperTable.style.visibility = "visible";
         frozenRowColumn(parentDom, wrapPart);
+        wraperTable.style.visibility = "visible";
     },0);
 }
+
 var appendStragy = function( wrapPart){
     if(defaultConfig.fixHeaderRow && defaultConfig.fixColumnNum > 0){
         wrapPart.fixedBody.appendChild(wrapPart.headDivDom);
@@ -74,7 +100,10 @@ var frozenRowColumn = function(parentDom, wrapPart) {
         bodyDivDomTable.style.width = (tempWidth - 20);
         headDivDomTable.style.width = tempWidth;
     }
+    //合并行
+    mergeRow(bodyDivDom);
 
+    //构造冻结固定列
     if(defaultConfig.fixColumnNum > 0){
         var middleFixedTheadDom = parentDom.querySelector('.mc-fixed-body .mc-thead');
         var middleFixedTbodyDom = parentDom.querySelector('.mc-fixed-body .mc-tbody');
@@ -119,12 +148,15 @@ var frozenRowColumn = function(parentDom, wrapPart) {
         columnDom.appendChild(mcFixedColumnThead);
         columnDom.appendChild(mcFixedColumnTbody);
     }
+    //绑定事件
+    bindEvent(parentDom,bodyDivDom, headDivDom, wrapPart);
+
+}
 
 
-
+var bindEvent = function(parentDom, bodyDivDom, headDivDom, wrapPart ){
     //滚动条配置
     bodyDivDom['onscroll'] = function (i) {
-
         headDivDom.scrollLeft = this.scrollLeft;
         if(defaultConfig.fixColumnNum > 0){
             //var columnDom = parentDom.querySelector('.mc-fixed-column');
@@ -135,10 +167,104 @@ var frozenRowColumn = function(parentDom, wrapPart) {
     };
 
 
+    //Row hover
+    var allTr = parentDom.getElementsByTagName('tr');
+    function focusRow(rowId, isOver){
+        allTr.forEach(function(tr){
+            var trRid = tr.getAttribute("ri");
+            if(trRid === rowId){
+                if(isOver){
+                    tr.addClass('hover');
+                }else {
+                    tr.removeClass('hover');
+                }
+            }
+        })
+    }
+    _.forEach(allTr, function(tr){
+        tr['onmouseover'] = function(){
+            var trRid = tr.getAttribute("ri");
+            focusRow(trRid, true);
+        }
+        tr['onmouseout'] = function(){
+            var trRid = tr.getAttribute("ri");
+            focusRow(trRid, false);
+        }
+    })
+    //CheckBox
+    if(defaultConfig.checkable === true){
+        var allCheckBox = parentDom.getElementsByTagName('td').filter(function(item){
+            return item.getAttribute('ci') === '-1' &&  item.getAttribute('ri') !=='-1';
+        });
+        var checkAllBox =  parentDom.getElementsByTagName('th').filter(function(item){
+            return item.getAttribute('ci') === '-1' &&  item.getAttribute('ri') === '-1';
+        });
+        //单个选项框选中
+        allCheckBox.forEach(function(cbtd){
+            var cb = cbtd.querySelector('input[type=checkbox]');
+            cb['onchange'] = function(){
+                var checked = this.checked;
+                var tr = this.parentTag('tr');
+                var rowIndex = tr.getAttribute('ri');
+                var checkedRow = parentDom.querySelectorAll('tr[ri="'+rowIndex+'"]');
+                checkedRow.forEach(function(trItem){
+                    //更新checkbox 选中
+                    var cbb = trItem.querySelector('input[type=checkbox]');
+                    cbb.checked = checked;
+                    //更新样式
+                    if(checked){
+                        trItem.addClass('checked');
+                    }else{
+                        trItem.removeClass('checked');
+                    }
+                })
+               var rowData = _.first(bindingData, {$$index :rowIndex });
+                rowData.$$checked = checked;
+                mcGrid.fire('row_select');
+            }
+        })
+
+        //变更所有选中状态
+        function allCheckChange(checked){
+            checkAllBox.forEach(function(cabth){
+                var cb = cabth.querySelector('input[type=checkbox]');
+                cb.checked = checked;
+                defaultConfig.$$allChecked =  checked;
+                //更新所有复选框
+                allCheckBox.forEach(function(cbtd){
+                    var cb = cbtd.querySelector('input[type=checkbox]');
+                    cb.checked = checked;
+                })
+                //更新所有数据
+                bindingData.forEach(function(item){
+                    item.$$checked = checked;
+                })
+
+                var allDataRow = parentDom.getElementsByTagName('tr').filter(function(item){
+                    return  item.getAttribute('ri') !== '-1';
+                })
+                allDataRow.forEach(function(item){
+                    if(checked){
+                        item.addClass('checked');
+                    }else{
+                        item.removeClass('checked');
+                    }
+                })
+                mcGrid.fire('row_select');
+            })
+        }
+
+
+        //绑定选中状态变化
+        checkAllBox.forEach(function(cabth){
+            var cb = cabth.querySelector('input[type=checkbox]');
+            cb['onchange'] = function(){
+                allCheckChange(this.checked);
+            }
+        })
+    }
+
 }
-
-
-
 
 //字段处理
 var processingConfig = function(config){
@@ -167,6 +293,14 @@ var createDom = function (element, className) {
     dom.className = className;
     return dom;
 };
+//数据处理
+var processingData = function(data){
+    _.forEach(data, function(item, i){
+        item.$$index = i;
+        item.$$checked = false;
+    })
+    bindingData = data;
+}
 //构建表格对象
 var buildTable = function (cols, data) {
     var head = buildTheader(cols);
@@ -180,13 +314,13 @@ var buildTheader = function (cols) {
     var thDomList = [];
     _.forEach(defColConfig, function (item, ci) {
         if(item.visible)
-            thDomList.push(createElement('th', item.text, null, item, 0, ci));
+            thDomList.push(createElement('th', item.text, null, item, -1, ci));
     })
     if (defaultConfig.checkable) {
-        var checkBoxTxt = createElement('th', "<input type='checkbox'/>", 'check-all check-btn',null, 0, -1);
+        var checkBoxTxt = createElement('th', "<input type='checkbox'/>", 'check-all check-btn',null, -1, -1);
         thDomList.unshift(checkBoxTxt);
     }
-    var trDom = createElement('tr', thDomList.join(''), null, null, 0)
+    var trDom = createElement('tr', thDomList.join(''), null, null, -1)
     var tableHeadDom = createElement('thead', trDom);
     return tableHeadDom;
 }
@@ -223,13 +357,13 @@ var buildTbody = function (cols, rows) {
         tdDomList = [];
         _.forEach(defColConfig, function (item, ci) {
             if(item.visible)
-            tdDomList.push(createElement('td', r[item.name], null, item, ri+1, ci));
+            tdDomList.push(createElement('td', r[item.name], null, item, r.$$index, ci));
         })
         if (defaultConfig.checkable) {
-            var checkBoxTxt = createElement('td', "<input type='checkbox'/>", 'check-btn', null,  ri+1, -1)
+            var checkBoxTxt = createElement('td', "<input type='checkbox'/>", 'check-btn', null, r.$$index, -1)
             tdDomList.unshift(checkBoxTxt);
         }
-        trDomList.push(createElement('tr', tdDomList.join(''), null, null, ri+1));
+        trDomList.push(createElement('tr', tdDomList.join(''), null, null, r.$$index));
     });
     var tableBodyDom = createElement('tbody', trDomList.join(''));
     return tableBodyDom;
@@ -251,6 +385,27 @@ _.filter = function (arr, func) {
         ;
     }
     return a;
+}
+
+_.first = function(arr, predict) {
+    for (var i = 0; i < arr.length; i++) {
+        if (predict instanceof Object) {
+            var allMeet = true;
+            for (name in predict) {
+                if (predict[name] != arr[i][name]) {
+                    allMeet = false;
+                    break;
+                }
+            }
+            if (allMeet) {
+                return arr[i];
+            }
+        } else if (predict instanceof Function) {
+            if (predict(arr[i])) {
+                return arr[i];
+            }
+        }
+    }
 }
 _.extend = function () {
     var _isObject, _extend;
@@ -325,7 +480,153 @@ _.clone = function(obj) {
     }
     throw new Error("Unable to copy obj! Its type isn't supported.");
 }
- };
+
+//公共基础类
+    NodeList.prototype.forEach = HTMLCollection.prototype.forEach = Array.prototype.forEach = function(func){
+    _.forEach(this, function(item, rowId){
+        func(item, rowId);
+    })
+}
+    NodeList.prototype.filter = HTMLCollection.prototype.filter = Array.prototype.filter =  function(func){
+        return _.filter(this, func);
+    }
+    Element.prototype.addClass = function(cls) {
+        var obj = this
+        var obj_class = obj.className; //获取 class 内容.
+            if(obj_class != null)
+        {
+            obj_class.replace(/(\s+)/gi, ' ');
+            var classArr = obj_class.split(' ');
+            if (classArr.indexOf(cls) > -1)
+                return;
+        }
+        blank = (obj_class != '') ? ' ' : '';//判断获取到的 class 是否为空, 如果不为空在前面加个'空格'.
+        added = obj_class + blank + cls;//组合原来的 class 和需要添加的 class.
+        obj.className = added;//替换原来的 class.
+    }
+    Element.prototype.removeClass = function (cls){
+    var obj = this;
+    var obj_class = ' '+obj.className+' ';//获取 class 内容, 并在首尾各加一个空格. ex) 'abc    bcd' -> ' abc    bcd '
+    obj_class = obj_class.replace(/(\s+)/gi, ' '),//将多余的空字符替换成一个空格. ex) ' abc    bcd ' -> ' abc bcd '
+        removed = obj_class.replace(' '+cls+' ', ' ');//在原来的 class 替换掉首尾加了空格的 class. ex) ' abc bcd ' -> 'bcd '
+    removed = removed.replace(/(^\s+)|(\s+$)/g, '');//去掉首尾空格. ex) 'bcd ' -> 'bcd'
+    obj.className = removed;//替换原来的 class.
+}
+    Element.prototype.hasClass = function (cls){
+    var obj = this;
+    var obj_class = obj.className,//获取 class 内容.
+        obj_class_lst = obj_class.split(/\s+/);//通过split空字符将cls转换成数组.
+    x = 0;
+    for(x in obj_class_lst) {
+        if(obj_class_lst[x] == cls) {//循环数组, 判断是否包含cls
+            return true;
+        }
+    }
+    return false;
+}
+    Element.prototype.parentTag = function(tagName){
+        var parentNode = this.parentNode;
+        do{
+            if(parentNode.tagName.toUpperCase() === tagName.toUpperCase() || parentNode.tagName.toUpperCase() == 'BODY'){
+                break;
+            }
+            var parentNode = parentNode.parentNode;
+        }
+        while(true)
+        if(parentNode.tagName.toUpperCase() === 'BODY')
+        {
+            return null;
+        }
+        else {
+            return parentNode;
+        }
+    }
+    function isInteger(obj) {  return (obj | 0) === obj ;}
+    //合并行
+    var mergeRow = function(bodyDivDom){
+        if(defaultConfig.mergeColumnMainIndex != null && defaultConfig.mergeColumns != null
+            && defaultConfig.mergeColumns.length > 0 && isInteger(defaultConfig.mergeColumnMainIndex )){
+            var rowConfig = [];
+            analyseRows(rowConfig);
+            transformRows(bodyDivDom, rowConfig);
+        }
+    }
+    function analyseRows(rowConfig) {
+        var col = defaultConfig.mergeColumnMainIndex;
+        var rows = bindingData;
+        var mergedColumnIndex = null;
+        var mergedColumnPropName = '';
+        for(var i = 0; i < defColConfig.length; i++){
+            if(defColConfig[i].visible === true){
+                mergedColumnIndex == null? mergedColumnIndex = 0 : mergedColumnIndex += 1;
+            }
+            if(mergedColumnIndex == col){
+                mergedColumnPropName = defColConfig[i].name;
+                break;
+            }
+        }
+        var groupRows = [];
+        var sameRows = [];
+        var lastValue = null;
+        for (var i = 0; i < rows.length; i++) {
+            var cur = rows[i][mergedColumnPropName];
+            if (lastValue === null) {
+                lastValue = cur;
+            }
+            if (cur === lastValue) {
+                sameRows.push(i)
+            } else {
+                groupRows.push(sameRows);
+                sameRows = [];
+                sameRows.push(i);
+                lastValue = cur;
+            }
+        }
+        if(sameRows.length != 0){
+            groupRows.push(sameRows);
+        }
+        rowConfig = groupRows;
+    }
+
+    function transformRows(bodyDivDom, rowConfig) {
+        var collist = defaultConfig.mergeColumns;
+        collist = collist.sort(function (a, b) {
+            return a > b;
+        });
+        var allTr = bodyDivDom.querySelectorAll('tr').filter(function (item) {
+            return item.getAttribute('ri') !== '-1';
+        })
+
+        function getRowSpanCount(rowId, colId){
+            if(collist.indexOf(colId) > -1)
+            {
+                var rowColCollection = _.first(rowConfig, function(item){
+                    return item.indexOf(colId);
+                });
+                if(rowColCollection[0] == colId && rowColCollection.length == 1){
+                    return 0; //不需要动
+                } else if(rowColCollection[0] == colId && rowColCollection.length > 1){
+                    return -1; //需要移除
+                } else if(rowColCollection[0] != colId && rowColCollection.length > 1){
+                    return rowColCollection.length;
+                }
+            }else {
+                //不需要动
+                return 0;
+            }
+        }
+        //设置Td 配置所有列
+        allTr.forEach(function(trDom){
+            var allTdDom = trDom.children;
+            var rowId = trDom.getAttribute('ri');
+            allTdDom.forEach(function(tdDom){
+                var colId = tdDom.getAttribute('ci');
+                //是否需要移除
+                if()
+            })
+        })
+    }
+};
 
 
     var col = [
@@ -338,15 +639,25 @@ _.clone = function(obj) {
     var data = [
         {id: '1111', name: '小明', address: '漕河泾250号', money: 100, birthDay: '2015-12-12'},
         {id: '2222', name: '小红', address: '新传公路1550号', money: 2005, birthDay: '2015-12-12'},
+        {id: '2222', name: '小红2', address: '新传公路1550号3', money: 2005, birthDay: '2015-12-12'},
         {id: '3333', name: '小兰', address: '小和家园顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶顶2001号', money: 3000, birthDay: '2015-12-12'}
     ]
-    for (var j = 0; j < 100; j++) {
+    for (var j = 0; j < 20; j++) {
         data.push({id: '3333', name: '小兰', address: '小和家园2001号', money: 30000, birthDay: '2015-12-12'});
     }
 
     var a = new Date();
     var g = new mcGrid();
-    g.InitGrid('mc-table', {checkable: true, fixHeaderRow: true, fixColumnNum: 1 }, col, data);
+    g.InitGrid('mc-table', {
+        checkable: true,
+        fixHeaderRow: true,
+        fixColumnNum: 2,
+        mergeColumnMainIndex: 0,
+        mergeColumns: [0,1,2]
+    }, col, data);
     var b = new Date();
+    g.on('row_select', function(data){
+        console.log(data);
+    });
     console.log('耗时:' + (b - a) + '毫秒');
 };

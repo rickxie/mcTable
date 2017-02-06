@@ -17,6 +17,7 @@ mcGrid.InitGrid = function (tableId, config, col, data) {
     //获取原始Class
     defaultClassName.table = _.getDefaultClass('#' + tableId + ' table');
     tableDom.className.replace('mc-table', '');
+
     tableDom.className += 'mc-table';
     //创建头部html
     var theadTxt = buildTheader(col);

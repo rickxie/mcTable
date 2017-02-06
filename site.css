@@ -93,3 +93,6 @@
 .mc-table .mc-table-wrapper .table > tbody > tr > td.col-hover {
   background-color: #ebf2f9;
 }
+.mc-table .mc-table-wrapper .table > tbody > tr.checked > td {
+  background-color: #ffe7bc;
+}
