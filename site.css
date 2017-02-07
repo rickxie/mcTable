@@ -96,3 +96,43 @@
 .mc-table .mc-table-wrapper .table > tbody > tr.checked > td {
   background-color: #ffe7bc;
 }
+.mc-table .mc-table-wrapper .table.sortable > thead > tr > th {
+  overflow: hidden;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.mc-table .mc-table-wrapper .table.sortable > thead > tr > th.text-center {
+  padding-right: 0;
+  padding-left: 0;
+}
+.mc-table .mc-table-wrapper .table.sortable > thead > tr > th:after {
+  display: inline-block;
+  margin-left: 5px;
+  font-family: ZenIcon;
+  font-size: 13px;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  line-height: 1;
+  color: #808080;
+  text-transform: none;
+  content: '\e6bd';
+  speak: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.mc-table .mc-table-wrapper .table.sortable > thead > tr > th.sort-down:after {
+  color: #145ccd;
+  content: '\e6b8';
+}
+.mc-table .mc-table-wrapper .table.sortable > thead > tr > th.sort-up:after {
+  color: #145ccd;
+  content: '\e6b9';
+}
+.mc-table .mc-table-wrapper .table.sortable > thead > tr > th.check-btn:after,
+.mc-table .mc-table-wrapper .table.sortable > thead > tr > th.sort-disabled:after {
+  display: none;
+}
+.mc-table .mc-table-wrapper .table.sortable > thead > tr > th.sort-disabled {
+  cursor: default;
+}

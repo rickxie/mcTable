@@ -5,6 +5,14 @@
     <script src="less.js" type="text/javascript"></script>
     <script src="site.js" type="text/javascript"></script>
     <style>
+        @font-face {
+            font-family: ZenIcon;
+            font-style: normal;
+            font-weight: normal;
+
+            src: url('fonts/zenicon.eot?v=2.1.0');
+            src: url('fonts/zenicon.eot?#iefix&v=2.1.0') format('embedded-opentype'), url('fonts/zenicon.woff?v=2.1.0') format('woff'), url('fonts/zenicon.ttf?v=2.1.0') format('truetype'), url('fonts/zenicon.svg#regular?v=2.1.0') format('svg');
+        }
         .container{
             width: auto;
             width: 650px;
@@ -19,7 +27,7 @@
 <body>
 <div class="container">
     <div id="mc-table">
-        <table class="table table-hover table-striped table-condensed table-bordered"></table>
+        <table class="table sortable table-hover table-striped table-condensed table-bordered"></table>
     </div></div>
 <script>
     window.onload = function() {
