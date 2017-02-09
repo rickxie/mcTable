@@ -17,7 +17,7 @@ function mcGrid() {
     //绑定表 数据
     var bindingData = [];
    var _ = mcGrid._ = {};
-    var $eventStore = { 'RowChecked': [], 'ColumnClicked': [] };
+    var $eventStore = { 'RowChecked': [], 'ColumnClicked': [], 'TdInitialize':[] };
     mcGrid.fire = function (eventName, data) {
         switch (eventName) {
             case 'RowChecked':
@@ -35,6 +35,16 @@ function mcGrid() {
                     var columnId = data;
                     var col = defColConfig.first({ '$$index': parseInt(columnId) });
                     func(col);
+                })
+            }; break;
+            case 'TdInitialize':
+            {
+                $eventStore['TdInitialize'].forEach(function (func) {
+                    var colId = data.getAttribute('ci');
+                    var rowId = data.getAttribute('ri');
+                    var col = _.first(defColConfig, { '$$index': colId}) || {};
+                    var row = _.first(bindingData, { '$$index': rowId}) || {};
+                    func({ dom: data, col: col, colId : colId, row: row});
                 })
             }; break;
         }
@@ -82,19 +92,19 @@ function mcGrid() {
         //重置默认设置
         _.extend(defaultConfig, config);
         //计算表格宽度
-        var sumWidth = 0;
+        //var sumWidth = 0;
         //var maxWidthCol = [ 0,0];
         for (var i = 0; i < defColConfig.length; i++) {
-            defColConfig[i] = _.extend({ 'min-width': '100px', 'width': '100px', 'visible': true }, defColConfig[i]);
+            defColConfig[i] = _.extend({ 'min-width': '100px', 'visible': true }, defColConfig[i]);
             var colWidth = parseFloat(defColConfig[i].width);
-            sumWidth += colWidth;
+            //sumWidth += colWidth;
             defColConfig[i].$$index = i;
         }
-        if (defaultConfig.checkable) {
-            sumWidth += 30;
-        }
-        defColConfig[defColConfig.length - 1].width = null;
-        defaultConfig.tableWidth = sumWidth + 'px';
+        //if (defaultConfig.checkable) {
+        //    sumWidth += 30;
+        //}
+        //defColConfig[defColConfig.length - 1].width = null;
+        //defaultConfig.tableWidth = sumWidth + 'px';
     };
     //数据处理
     var processingData = function (data) {
@@ -107,7 +117,7 @@ function mcGrid() {
     //获取列配置的 样式
     var getStyle = function (col) {
         var styleStr = [];
-        var allowedStyle = ['width', 'text-align'];
+        var allowedStyle = ['min-width', 'text-align'];
         _.forEach(allowedStyle, function (i) {
             if (col[i] != null) {
                 styleStr.push(i + ':' + col[i]);
@@ -144,6 +154,8 @@ function mcGrid() {
         var allTh = bodyDivDom.querySelectorAll('table th');
         allTd.forEach(function (item) {
             item.style.width = item.offsetWidth + 'px';
+            //初始化所有Td的事件，可以提供给客户端做相应设置
+            mcGrid.fire('TdInitialize', item)
         })
         allTh.forEach(function (item) {
             item.style.width = item.offsetWidth + 'px';
@@ -510,6 +522,7 @@ function mcGrid() {
                     case null: break;
                     default: //需要设置rowspan
                         tdDom.setAttribute('rowspan', handleResult);
+                        tdDom.style.verticalAlign = 'middle';
                         break;
                 }
             })
@@ -517,7 +530,6 @@ function mcGrid() {
         allNeedRemoveDom.forEach(function (item) {
             item.remove();
         })
-
     }
 
     _.forEach = function (arr, func) {

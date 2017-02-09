@@ -67,6 +67,9 @@
     g.on('ColumnClicked', function(data){
         console.log(data);
     });
+    g.on('TdInitialize', function(event){
+         event.dom.addClass(event.col.name);
+    })
     console.log('耗时:' + (b - a) + '毫秒');};
 </script>
 </body>
