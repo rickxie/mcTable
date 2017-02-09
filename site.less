@@ -11,6 +11,7 @@
 @danger-border: #ffe5e0;
 @warning-bg: #fff0d5;
 @warning-border: #ffdcbc;
+@th-bg-color: #f1f1f1;
 
 .cellBorder() {
   border: @cellBorder;
@@ -37,7 +38,7 @@
     margin-bottom: 20px;
     margin: 0;
     padding: 0;
-
+    position: relative;
     th, td {
       border-bottom: @cellBorder;
       padding: @cell-padding;
@@ -45,8 +46,9 @@
       word-break: break-word;
       background-color: white;
     }
+
     & > thead > tr > th {
-      background-color: #f1f1f1;
+      background-color: @th-bg-color;
       border-bottom: @cellBorder;
     }
     th {
@@ -82,20 +84,27 @@
   }
   .mc-table-wrapper {
     height: 100%;
-
+    .mc-thead{
+        background-color: @th-bg-color;
+        overflow:hidden;
+        position: absolute;
+        z-index: 1001;
+    }
     .mc-fixed-body .mc-tbody, .mc-tbody {
       overflow: auto;
       height: 100%;
     }
     .mc-fixed-column {
-      z-index: 1;
+      z-index: 1002;
     }
     .mc-fixed-column, .mc-fixed-body {
       top: 0;
       left: 0;
       position: absolute;
     }
-
+    .mc-fixed-body{
+      width:100%;
+    }
     .table > tbody > tr.hover > td, .table > tbody > tr > td.col-hover {
       background-color: @rowHover;
     }
@@ -146,6 +155,7 @@
     & > thead > tr > th.sort-disabled {
       cursor: default;
     }
+
     }
 
   }

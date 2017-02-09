@@ -20,6 +20,7 @@
   margin-bottom: 20px;
   margin: 0;
   padding: 0;
+  position: relative;
 }
 .mc-table .table th,
 .mc-table .table td {
@@ -75,19 +76,28 @@
 .mc-table .mc-table-wrapper {
   height: 100%;
 }
+.mc-table .mc-table-wrapper .mc-thead {
+  background-color: #f1f1f1;
+  overflow: hidden;
+  position: absolute;
+  z-index: 1001;
+}
 .mc-table .mc-table-wrapper .mc-fixed-body .mc-tbody,
 .mc-table .mc-table-wrapper .mc-tbody {
   overflow: auto;
   height: 100%;
 }
 .mc-table .mc-table-wrapper .mc-fixed-column {
-  z-index: 1;
-}
+  z-index: 1002;
+} 
 .mc-table .mc-table-wrapper .mc-fixed-column,
 .mc-table .mc-table-wrapper .mc-fixed-body {
   top: 0;
   left: 0;
   position: absolute;
+}
+.mc-table .mc-table-wrapper .mc-fixed-body {
+  width: 100%;
 }
 .mc-table .mc-table-wrapper .table > tbody > tr.hover > td,
 .mc-table .mc-table-wrapper .table > tbody > tr > td.col-hover {
