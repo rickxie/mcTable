@@ -2,12 +2,12 @@ function mcGrid() {
     var mcGrid = this;
     //配置全局对象
     var defaultClassName = { table: 'table sortable table-hover table-striped table-condensed table-bordered', tr: null, td: null };
-    var defaultConfig = {
+    var defaultConfig = mcGrid.defaultConfig = {
         $$allChecked: false,
         checkable: false, //是否显示复选框
         sortable: false, //是否可以排序
         tableWidth: '', //表格宽度
-        fixHeaderRow: true, //固定标题行
+        fixHeaderRow: false,//固定标题行
         fixColumnNum: 0,    //固定前几列
         mergeColumnMainIndex: null, //需要合并的判断列
         mergeColumns: null //需要合并的列的集合
@@ -17,7 +17,7 @@ function mcGrid() {
     //绑定表 数据
     var bindingData = [];
    var _ = mcGrid._ = {};
-    var $eventStore = { 'RowChecked': [], 'ColumnClicked': [], 'TdInitialize':[] };
+    var $eventStore = { 'RowChecked': [], 'SortChanged': [], 'TdInitialize':[] };
     mcGrid.fire = function (eventName, data) {
         switch (eventName) {
             case 'RowChecked':
@@ -29,9 +29,9 @@ function mcGrid() {
                     func(filteredData);
                 })
             }; break;
-            case 'ColumnClicked':
+            case 'SortChanged':
             {
-                $eventStore['ColumnClicked'].forEach(function (func) {
+                $eventStore['SortChanged'].forEach(function (func) {
                     var columnId = data;
                     var col = defColConfig.first({ '$$index': parseInt(columnId) });
                     func(col);
@@ -74,7 +74,8 @@ function mcGrid() {
         var theadTxt = buildTheader(defColConfig);
         //var headTable = createElement('table', theadTxt, defaultClassName.table);
         var tbodyTxt = buildTbody(defColConfig, data);
-        var bodyTable = createElementTxt('table', theadTxt + tbodyTxt, defaultClassName.table, { width: defaultConfig.tableWidth });
+        var bodyTable = createElementTxt('table', theadTxt + tbodyTxt, defaultClassName.table, { width: defaultConfig.width });
+
         //var tableTxt = buildTable(defColConfig, data);
         wrapPart.bodyDivDom.innerHTML = bodyTable;
         appendStragy(wrapPart);
@@ -117,7 +118,7 @@ function mcGrid() {
     //获取列配置的 样式
     var getStyle = function (col) {
         var styleStr = [];
-        var allowedStyle = ['min-width', 'text-align'];
+        var allowedStyle = ['min-width','width', 'text-align'];
         _.forEach(allowedStyle, function (i) {
             if (col[i] != null) {
                 styleStr.push(i + ':' + col[i]);
@@ -349,17 +350,52 @@ function mcGrid() {
                 }
             })
         }
-
+        //排序
         if (defaultConfig.sortable === true) {
             var thList = parentDom.getElementsByTagName('th').filter(function (item) {
                 return item.getAttribute('ci') !== '-1';
             });
+            //排序
+            function sortProperty(colId, acending) {
+                thList.forEach(function (thDom) {
+                    var cid = thDom.getAttribute('ci')
+                    thDom.removeClass('sort-up');
+                    thDom.removeClass('sort-down');
+                    if (cid == colId) {
+                        acending == true ? thDom.addClass('sort-up') : thDom.addClass('sort-down');
+                        defaultConfig.$$orderByCol = _.first(defColConfig, {$$index: colId});
+                        defaultConfig.orderBy = defaultConfig.$$orderByCol.name;
+                        defaultConfig.acending = acending;
+                    }
+                })
+            };
+            var sortColId = 0;
+            //处理 orderBy, acending 异常的情况
+            if(defaultConfig.orderBy != null){
+                var sortCol = _.first(defColConfig, { name: defaultConfig.orderBy})
+                if(sortCol != null){
+                    sortColId = sortCol.$$index;
+                }else{ sortColId = 0; defaultConfig.orderBy = defColConfig[0].name;}
+            }else { sortColId = 0; defaultConfig.orderBy = defColConfig[0].name; }
+            defaultConfig.acending = !!defaultConfig.acending
+
+            //初始化
+            defColConfig.orderBy != null ||  _.first(defColConfig, { name: defaultConfig.orderBy})
+            sortProperty(sortColId, defaultConfig.acending);
+
+
             thList.forEach(function (thDom) {
                 thDom['onclick'] = function () {
                     var colId = this.getAttribute('ci')
-                    mcGrid.fire('ColumnClicked', colId);
+                    var setAcending = true;
+                    if(colId == defaultConfig.$$orderByCol.$$index){
+                        setAcending = !defaultConfig.acending;
+                    }
+                    sortProperty(colId,  setAcending);
+                    mcGrid.fire('SortChanged', colId);
                 }
             })
+
         }
     }
 

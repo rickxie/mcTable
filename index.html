@@ -58,13 +58,16 @@
         fixColumnNum: 1,
         mergeColumnMainIndex: 0,
         mergeColumns: [2,3],
-        sortable: true
+        sortable: true,
+        tableWidth: '1000px',
+        orderBy: 'name',
+        acending: true
     }, col, data);
     var b = new Date();
     g.on('RowChecked', function(data){
         console.log(data);
     });
-    g.on('ColumnClicked', function(data){
+    g.on('SortChanged', function(data){
         console.log(data);
     });
     g.on('TdInitialize', function(event){
