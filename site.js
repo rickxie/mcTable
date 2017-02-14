@@ -34,7 +34,7 @@ function mcGrid() {
                 $eventStore['SortChanged'].forEach(function (func) {
                     var columnId = data;
                     var col = defColConfig.first({ '$$index': parseInt(columnId) });
-                    func(col);
+                    func({ col: col, orderBy: defaultConfig.orderBy, ascending: defaultConfig.ascending});
                 })
             }; break;
             case 'TdInitialize':
@@ -92,20 +92,18 @@ function mcGrid() {
     var processingConfig = function (config) {
         //重置默认设置
         _.extend(defaultConfig, config);
-        //计算表格宽度
-        //var sumWidth = 0;
-        //var maxWidthCol = [ 0,0];
+        //处理非法情况
+        defaultConfig.fixColumnNum = parseInt(defaultConfig.fixColumnNum);
+        (defaultConfig.fixColumnNum == null || defaultConfig.fixColumnNum == NaN) && (defaultConfig.fixColumnNum = 0)
+        defaultConfig.isCheckedByRow = !!defaultConfig.isCheckedByRow;
+        defaultConfig.isSingleRowSelected = !!defaultConfig.isSingleRowSelected;
+        //设置表格默认样式
         for (var i = 0; i < defColConfig.length; i++) {
             defColConfig[i] = _.extend({ 'min-width': '100px', 'visible': true }, defColConfig[i]);
             var colWidth = parseFloat(defColConfig[i].width);
             //sumWidth += colWidth;
             defColConfig[i].$$index = i;
         }
-        //if (defaultConfig.checkable) {
-        //    sumWidth += 30;
-        //}
-        //defColConfig[defColConfig.length - 1].width = null;
-        //defaultConfig.tableWidth = sumWidth + 'px';
     };
     //数据处理
     var processingData = function (data) {
@@ -243,12 +241,14 @@ function mcGrid() {
     var bindEvent = function (parentDom, bodyDivDom, headDivDom, wrapPart) {
         //滚动条配置
         bodyDivDom['onscroll'] = function (i) {
-            headDivDom.querySelector('table').style.left = '-' + this.scrollLeft + 'px';
-            if (defaultConfig.fixColumnNum > 0) {
-                //var columnDom = parentDom.querySelector('.mc-fixed-column');
-                //columnDom.left = this.scrollLeft;
-                var fixedColumnBodyTable = wrapPart.fixedColumn.querySelector('.mc-tbody table')
-                fixedColumnBodyTable.style.marginTop = '-' + this.scrollTop + 'px';
+            if (defaultConfig.fixHeaderRow) {
+                headDivDom.querySelector('table').style.left = '-' + this.scrollLeft + 'px';
+                if (defaultConfig.fixColumnNum > 0) {
+                    //var columnDom = parentDom.querySelector('.mc-fixed-column');
+                    //columnDom.left = this.scrollLeft;
+                    var fixedColumnBodyTable = wrapPart.fixedColumn.querySelector('.mc-tbody table')
+                    fixedColumnBodyTable.style.marginTop = '-' + this.scrollTop + 'px';
+                }
             }
         };
 
@@ -278,120 +278,152 @@ function mcGrid() {
                 focusRow(trRid, false);
             }
         })
-        //CheckBox
-        if (defaultConfig.checkable === true) {
-            var allCheckBox = parentDom.getElementsByTagName('td').filter(function (item) {
-                return item.getAttribute('ci') === '-1' && item.getAttribute('ri') !== '-1';
-            });
-            var checkAllBox = parentDom.getElementsByTagName('th').filter(function (item) {
-                return item.getAttribute('ci') === '-1' && item.getAttribute('ri') === '-1';
-            });
-            //单个选项框选中
-            allCheckBox.forEach(function (cbtd) {
-                var cb = cbtd.querySelector('input[type=checkbox]');
-                cb['onchange'] = function () {
-                    var checked = this.checked;
-                    var tr = this.parentTag('tr');
-                    var rowIndex = tr.getAttribute('ri');
-                    var checkedRow = parentDom.querySelectorAll('tr[ri="' + rowIndex + '"]');
-                    checkedRow.forEach(function (trItem) {
-                        //更新checkbox 选中
-                        var cbb = trItem.querySelector('input[type=checkbox]');
-                        cbb.checked = checked;
-                        //更新样式
-                        if (checked) {
-                            trItem.addClass('checked');
-                        } else {
-                            trItem.removeClass('checked');
-                        }
-                    })
-                    var rowData = _.first(bindingData, { $$index: rowIndex });
-                    rowData.$$checked = checked;
-                    mcGrid.fire('RowChecked');
+
+        //缓存全局信息
+        var allTdCheckbox = parentDom.getElementsByTagName('td').filter(function (item) {
+            return item.getAttribute('ci') === '-1' && item.getAttribute('ri') !== '-1';
+        });
+        var checkAllBox = parentDom.getElementsByTagName('th').filter(function (item) {
+            return item.getAttribute('ci') === '-1' && item.getAttribute('ri') === '-1';
+        });
+
+        //全部选中
+        function checkAllTr(checked) {
+            //更新所有复选框选中标记
+            checkAllBox.forEach(function (cabth) {
+                var cb = cabth.querySelector('input[type=checkbox]');
+                cb.checked = checked;
+                defaultConfig.$$allChecked = checked;
+                //更新所有复选框
+                allTdCheckbox.forEach(function (cbtd) {
+                    var cb = cbtd.querySelector('input[type=checkbox]');
+                    cb.checked = checked;
+                })
+
+            })
+            //更新Tr被选中的样式
+            var allDataRow = parentDom.getElementsByTagName('tr').filter(function (item) {
+                return item.getAttribute('ri') !== '-1';
+            })
+            allDataRow.forEach(function (item) {
+                if (checked) {
+                    item.addClass('checked');
+                } else {
+                    item.removeClass('checked');
                 }
             })
 
-            //变更所有选中状态
-            function allCheckChange(checked) {
-                checkAllBox.forEach(function (cabth) {
-                    var cb = cabth.querySelector('input[type=checkbox]');
-                    cb.checked = checked;
-                    defaultConfig.$$allChecked = checked;
-                    //更新所有复选框
-                    allCheckBox.forEach(function (cbtd) {
-                        var cb = cbtd.querySelector('input[type=checkbox]');
-                        cb.checked = checked;
-                    })
-                    //更新所有数据
-                    bindingData.forEach(function (item) {
-                        item.$$checked = checked;
-                    })
+            //更新所有数据被选中的标记
+            bindingData.forEach(function (item) {
+                item.$$checked = checked;
+            })
 
-                    var allDataRow = parentDom.getElementsByTagName('tr').filter(function (item) {
-                        return item.getAttribute('ri') !== '-1';
-                    })
-                    allDataRow.forEach(function (item) {
-                        if (checked) {
-                            item.addClass('checked');
-                        } else {
-                            item.removeClass('checked');
-                        }
-                    })
-                    mcGrid.fire('RowChecked');
-                })
+        }
+        //选中单行
+        function checkSingleTr(trDom, checkboxDom){
+            var tr = trDom;
+            var rowIndex = tr.getAttribute('ri');
+            var rowData = _.first(bindingData, { $$index: rowIndex });
+            var checked = false;
+            (checkboxDom != null) ?( checked = checkboxDom.checked): (checked = !rowData.$$checked);
+
+            //若为单选则全部设为不选择
+            if(defaultConfig.isSingleRowSelected){
+                checkAllTr(false);
             }
+            var checkedRow = parentDom.querySelectorAll('tr[ri="' + rowIndex + '"]');
+            checkedRow.forEach(function (trItem) {
+                if(defaultConfig.checkable) {
+                    //更新checkbox 选中
+                    var cbb = trItem.querySelector('input[type=checkbox]');
+                    cbb.checked = checked;
+                }
+                //更新样式
+                if (checked) {
+                    trItem.addClass('checked');
+                } else {
+                    trItem.removeClass('checked');
+                }
+            })
+            rowData.$$checked = checked;
+            mcGrid.fire('RowChecked');
+        }
 
+        //CheckBox
+        if (defaultConfig.checkable === true) {
 
+            //单个选项框选中
+            allTdCheckbox.forEach(function (cbtd) {
+                var cb = cbtd.querySelector('input[type=checkbox]');
+                var trDom = cbtd.parentTag('tr')
+                cb['onchange'] = function () {
+                    checkSingleTr(trDom, cb);
+                }
+            })
             //绑定选中状态变化
             checkAllBox.forEach(function (cabth) {
                 var cb = cabth.querySelector('input[type=checkbox]');
                 cb['onchange'] = function () {
-                    allCheckChange(this.checked);
+                    checkAllTr(this.checked);
+                    mcGrid.fire('RowChecked');
                 }
             })
         }
-        //排序
+        //单行选择
+        if(defaultConfig.isSingleRowSelected == true && defaultConfig.isCheckedByRow === true){
+            var allTrDom = parentDom.getElementsByTagName('tr').filter(function (item) {
+                return  item.getAttribute('ri') !== '-1';
+            });
+            allTrDom.forEach(function(trDom){
+                trDom['onclick'] = function(){
+                    checkSingleTr(trDom);
+                }
+            })
+        }
+
+
+        //开启排序
         if (defaultConfig.sortable === true) {
             var thList = parentDom.getElementsByTagName('th').filter(function (item) {
                 return item.getAttribute('ci') !== '-1';
             });
             //排序
-            function sortProperty(colId, acending) {
+            function sortProperty(colId, ascending, firstLoad) {
                 thList.forEach(function (thDom) {
                     var cid = thDom.getAttribute('ci')
                     thDom.removeClass('sort-up');
                     thDom.removeClass('sort-down');
                     if (cid == colId) {
-                        acending == true ? thDom.addClass('sort-up') : thDom.addClass('sort-down');
+                        ascending == true ? thDom.addClass('sort-up') : thDom.addClass('sort-down');
                         defaultConfig.$$orderByCol = _.first(defColConfig, {$$index: colId});
                         defaultConfig.orderBy = defaultConfig.$$orderByCol.name;
-                        defaultConfig.acending = acending;
+                        defaultConfig.ascending = ascending;
                     }
                 })
             };
             var sortColId = 0;
-            //处理 orderBy, acending 异常的情况
+            //处理 orderBy, ascending 异常的情况
             if(defaultConfig.orderBy != null){
                 var sortCol = _.first(defColConfig, { name: defaultConfig.orderBy})
                 if(sortCol != null){
                     sortColId = sortCol.$$index;
                 }else{ sortColId = 0; defaultConfig.orderBy = defColConfig[0].name;}
             }else { sortColId = 0; defaultConfig.orderBy = defColConfig[0].name; }
-            defaultConfig.acending = !!defaultConfig.acending
+            defaultConfig.ascending = !!defaultConfig.ascending
 
             //初始化
             defColConfig.orderBy != null ||  _.first(defColConfig, { name: defaultConfig.orderBy})
-            sortProperty(sortColId, defaultConfig.acending);
+            sortProperty(sortColId, defaultConfig.ascending);
 
-
+            //列排序
             thList.forEach(function (thDom) {
                 thDom['onclick'] = function () {
                     var colId = this.getAttribute('ci')
-                    var setAcending = true;
+                    var setAscending = true;
                     if(colId == defaultConfig.$$orderByCol.$$index){
-                        setAcending = !defaultConfig.acending;
+                        setAscending = !defaultConfig.ascending;
                     }
-                    sortProperty(colId,  setAcending);
+                    sortProperty(colId,  setAscending);
                     mcGrid.fire('SortChanged', colId);
                 }
             })

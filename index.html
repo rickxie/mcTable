@@ -16,7 +16,7 @@
         }
         .container {
             width: auto;
-            width: 450px;
+            width: 550px;
             height: 300px;
             overflow:hidden;
         }
@@ -34,11 +34,11 @@
     window.onload = function() {
 
     var col = [
-        {name: 'id', text: '编3333号', width: '100px'},
-        {name: 'name', text: '姓33333名', width: '100px'},
-        {name: 'address', text: "地333333址", width: '100px'},
-        {name: 'money', text: "金333333额", 'text-align': 'right', width: '100px'},
-        {name: 'birthDay', text: "出生333333日期",visible: true, width: '100px'},
+        {name: 'id', text: '编3333号'},
+        {name: 'name', text: '姓33333名'},
+        {name: 'address', text: "地333333址"},
+        {name: 'money', text: "金333333额", 'text-align': 'right'},
+        {name: 'birthDay', text: "出生333333日期",visible: true},
     ];
     var data = [
         {id: '1111', name: '小明', address: '234444   ', money: 100, birthDay: '2015-12-12'},
@@ -53,15 +53,15 @@
     var a = new Date();
     var g = new mcGrid();
     g.InitGrid('mc-table', {
-        checkable: true,
+//        checkable: true,
+        isCheckedByRow: true,
+        isSingleRowSelected: true,
         fixHeaderRow: true,
         fixColumnNum: 1,
-        mergeColumnMainIndex: 0,
-        mergeColumns: [2,3],
         sortable: true,
-        tableWidth: '1000px',
+        width: '1000px',
         orderBy: 'name',
-        acending: true
+        ascending: true
     }, col, data);
     var b = new Date();
     g.on('RowChecked', function(data){
