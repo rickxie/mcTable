@@ -98,6 +98,7 @@
 }
 .mc-table .mc-table-wrapper .mc-fixed-body {
   width: 100%;
+  height: 100%;
 }
 .mc-table .mc-table-wrapper .table > tbody > tr.hover > td,
 .mc-table .mc-table-wrapper .table > tbody > tr > td.col-hover {

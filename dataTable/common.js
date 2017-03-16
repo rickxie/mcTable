@@ -9,6 +9,27 @@ _.forEach = function (arr, func) {
         func(arr[i], i);
     }
 }
+_.first = function (arr, predict) {
+    for (var i = 0; i < arr.length; i++) {
+        if (typeof (predict) == 'object') {
+            var allMeet = true;
+            for (name in predict) {
+                if (predict[name] != arr[i][name]) {
+                    allMeet = false;
+                    break;
+                }
+            }
+            if (allMeet) {
+                return arr[i];
+            }
+        } else if (typeof (predict) == 'function') {
+            if (predict(arr[i])) {
+                return arr[i];
+            }
+        }
+    }
+}
+/*//s*/
 _.filter = function (arr, predict) {
     var a = [];
     var i = 0;
@@ -31,27 +52,6 @@ _.filter = function (arr, predict) {
         }
     }
     return a;
-}
-
-_.first = function (arr, predict) {
-    for (var i = 0; i < arr.length; i++) {
-        if (typeof (predict) == 'object') {
-            var allMeet = true;
-            for (name in predict) {
-                if (predict[name] != arr[i][name]) {
-                    allMeet = false;
-                    break;
-                }
-            }
-            if (allMeet) {
-                return arr[i];
-            }
-        } else if (typeof (predict) == 'function') {
-            if (predict(arr[i])) {
-                return arr[i];
-            }
-        }
-    }
 }
 _.extend = function () {
     var _isObject, _extend;

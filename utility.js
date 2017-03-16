@@ -3,69 +3,13 @@
  */
 var base = (function () {
     function base() {
-        this.forEach = HTMLCollection.prototype.forEach = Array.prototype.forEach = function (func) {
-            _.forEach(this, function (item, rowId) {
-                func(item, rowId);
-            });
-        };
-        this.filter = HTMLCollection.prototype.filter = Array.prototype.filter = function (func) {
-            return _.filter(this, func);
-        };
-        this.addClass = function (cls) {
-            var obj = this;
-            var obj_class = obj.className; //获取 class 内容.
-            if (obj_class != null) {
-                obj_class.replace(/(\s+)/gi, ' ');
-                var classArr = obj_class.split(' ');
-                if (classArr.indexOf(cls) > -1)
-                    return;
-            }
-            blank = (obj_class != '') ? ' ' : ''; //判断获取到的 class 是否为空, 如果不为空在前面加个'空格'.
-            added = obj_class + blank + cls; //组合原来的 class 和需要添加的 class.
-            obj.className = added; //替换原来的 class.
-        };
-        this.removeClass = function (cls) {
-            var obj = this;
-            var obj_class = ' ' + obj.className + ' '; //获取 class 内容, 并在首尾各加一个空格. ex) 'abc    bcd' -> ' abc    bcd '
-            obj_class = obj_class.replace(/(\s+)/gi, ' '),
-                removed = obj_class.replace(' ' + cls + ' ', ' '); //在原来的 class 替换掉首尾加了空格的 class. ex) ' abc bcd ' -> 'bcd '
-            removed = removed.replace(/(^\s+)|(\s+$)/g, ''); //去掉首尾空格. ex) 'bcd ' -> 'bcd'
-            obj.className = removed; //替换原来的 class.
-        };
-        this.hasClass = function (cls) {
-            var obj = this;
-            var obj_class = obj.className, //获取 class 内容.
-            obj_class_lst = obj_class.split(/\s+/); //通过split空字符将cls转换成数组.
-            x = 0;
-            for (x in obj_class_lst) {
-                if (obj_class_lst[x] == cls) {
-                    return true;
-                }
-            }
-            return false;
-        };
-        this.parentTag = function (tagName) {
-            var parentNode = this.parentNode;
-            do {
-                if (parentNode.tagName.toUpperCase() === tagName.toUpperCase() || parentNode.tagName.toUpperCase() == 'BODY') {
-                    break;
-                }
-                var parentNode = parentNode.parentNode;
-            } while (true);
-            if (parentNode.tagName.toUpperCase() === 'BODY') {
-                return null;
-            }
-            else {
-                return parentNode;
-            }
-        };
     }
     base.prototype.forEach = function (arr, func) {
-        var i = 0;
-        for (i = 0; i < arr.length; i++) {
+        for (var i = 0; i < arr.length; i++) {
             func(arr[i], i);
         }
     };
+    //
     base.prototype.filter = function (arr, func) {
         var a = [];
         var i = 0;
@@ -73,7 +17,6 @@ var base = (function () {
             if (func(arr[i])) {
                 a.push(arr[i]);
             }
-            ;
         }
         return a;
     };
@@ -153,25 +96,26 @@ var base = (function () {
         }
         // Handle Array
         if (obj instanceof Array) {
-            var copy = [];
+            var copy1 = [];
             for (var i = 0, len = obj.length; i < len; ++i) {
-                copy[i] = clone(obj[i]);
+                copy1[i] = this.clone(obj[i]);
             }
-            return copy;
+            return copy1;
         }
         // Handle Object
         if (obj instanceof Object) {
-            var copy = {};
+            var copy2 = {};
             for (var attr in obj) {
                 if (obj.hasOwnProperty(attr))
-                    copy[attr] = clone(obj[attr]);
+                    copy2[attr] = this.clone(obj[attr]);
             }
-            return copy;
+            return copy2;
         }
         throw new Error("Unable to copy obj! Its type isn't supported.");
     };
     base.prototype.isInteger = function (obj) { return (obj | 0) === obj; };
     return base;
 })();
+exports.__esModule = true;
 exports["default"] = base;
 //# sourceMappingURL=utility.js.map

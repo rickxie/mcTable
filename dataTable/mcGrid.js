@@ -1,7 +1,7 @@
 function mcGrid() {
     var mcGrid = this;
     //配置全局对象
-    var defaultClassName = { table: 'table sortable table-hover table-striped table-condensed table-bordered', tr: null, td: null };
+    var defaultClassName = { table: 'table table-hover table-striped table-condensed table-bordered', tr: null, td: null };
     var defaultConfig = mcGrid.defaultConfig = {
         $$allChecked: false,
         checkable: false, //是否显示复选框
@@ -48,10 +48,10 @@ function mcGrid() {
                 })
             }; break;
         }
-    }
+    };
     mcGrid.on = function (eventName, func) {
         $eventStore[eventName] !== null && ($eventStore[eventName].push(func))
-    }
+    };
 
 
     mcGrid.InitGrid = function (tableId, config, col, data) {
@@ -69,13 +69,18 @@ function mcGrid() {
             bodyDivDom: createElementDom('div', 'mc-tbody'),
             fixedColumn: createElementDom('div', 'mc-fixed-column'),
             fixedBody: createElementDom('div', 'mc-fixed-body')
-        }
+        };
         var wraperTable = wrapPart.wraperContainer;
         var theadTxt = buildTheader(defColConfig);
         //var headTable = createElement('table', theadTxt, defaultClassName.table);
         var tbodyTxt = buildTbody(defColConfig, data);
-        var bodyTable = createElementTxt('table', theadTxt + tbodyTxt, defaultClassName.table, { width: defaultConfig.width });
+        var sortableClass = '';
+        if(defaultConfig.sortable == true)
+        {
+            sortableClass = ' sortable'
+        }
 
+        var bodyTable = createElementTxt('table', theadTxt + tbodyTxt, defaultClassName.table + sortableClass , { width: defaultConfig.width });
         //var tableTxt = buildTable(defColConfig, data);
         wrapPart.bodyDivDom.innerHTML = bodyTable;
         appendStragy(wrapPart);
@@ -93,8 +98,7 @@ function mcGrid() {
         //重置默认设置
         _.extend(defaultConfig, config);
         //处理非法情况
-        defaultConfig.fixColumnNum = parseInt(defaultConfig.fixColumnNum);
-        (defaultConfig.fixColumnNum == null || defaultConfig.fixColumnNum == NaN) && (defaultConfig.fixColumnNum = 0)
+        defaultConfig.fixColumnNum =  defaultConfig.fixColumnNum | 0;
         defaultConfig.isCheckedByRow = !!defaultConfig.isCheckedByRow;
         defaultConfig.isSingleRowSelected = !!defaultConfig.isSingleRowSelected;
         //设置表格默认样式
@@ -182,7 +186,7 @@ function mcGrid() {
             //headDivDomTable.style.width = tempWidth;
         }
         //构造冻结固定列
-        if (defaultConfig.fixColumnNum > 0 && bindingData.length > 0) {
+        if (defaultConfig.fixHeaderRow && defaultConfig.fixColumnNum > 0 && bindingData.length > 0) {
             var fixedBodyMcThead = parentDom.querySelector('.mc-fixed-body .mc-thead');
             var fixedBodyMcTbody = parentDom.querySelector('.mc-fixed-body .mc-tbody');
             var bottomTheadTable = fixedBodyMcThead.querySelector('table');
@@ -545,7 +549,9 @@ function mcGrid() {
     }
     //合并移除不相关Td
     function transformRows(bodyDivDom, rowConfig) {
-        var collist = defaultConfig.mergeColumns;
+        //格式化mergeColumns字段
+        var collist = [];
+        defaultConfig.mergeColumns.forEach(function(item){ collist.push((item|0));});
         collist = collist.sort(function (a, b) {
             return a > b;
         });
