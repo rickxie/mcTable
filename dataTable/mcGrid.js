@@ -10,14 +10,16 @@ function mcGrid() {
         fixHeaderRow: false,//固定标题行
         fixColumnNum: 0,    //固定前几列
         mergeColumnMainIndex: null, //需要合并的判断列
-        mergeColumns: null //需要合并的列的集合
+        mergeColumns: null, //需要合并的列的集合
+        resizable: false
     };
     //默认列对象
     var defColConfig = [];
     //绑定表 数据
     var bindingData = [];
-   var _ = mcGrid._ = {};
-    var $eventStore = { 'RowChecked': [], 'SortChanged': [], 'TdInitialize':[] };
+    var _ = mcGrid._ = {};
+    var $eventStore = { 'RowChecked': [], 'SortChanged': [], 'TdInitialize': [] };
+
     mcGrid.fire = function (eventName, data) {
         switch (eventName) {
             case 'RowChecked':
@@ -26,35 +28,37 @@ function mcGrid() {
                     var filteredData = bindingData.filter(function (item) {
                         return item.$$checked === true;
                     });
-                    func(filteredData);
-                })
+                    func(filteredData, data);
+                });
             }; break;
             case 'SortChanged':
             {
                 $eventStore['SortChanged'].forEach(function (func) {
                     var columnId = data;
                     var col = defColConfig.first({ '$$index': parseInt(columnId) });
-                    func({ col: col, orderBy: defaultConfig.orderBy, ascending: defaultConfig.ascending});
-                })
+                    func({ col: col, orderBy: defaultConfig.orderBy, ascending: defaultConfig.ascending });
+                });
             }; break;
             case 'TdInitialize':
             {
                 $eventStore['TdInitialize'].forEach(function (func) {
                     var colId = data.getAttribute('ci');
                     var rowId = data.getAttribute('ri');
-                    var col = _.first(defColConfig, { '$$index': colId}) || {};
-                    var row = _.first(bindingData, { '$$index': rowId}) || {};
-                    func({ dom: data, col: col, colId : colId, row: row});
-                })
+                    var col = _.first(defColConfig, { '$$index': colId }) || {};
+                    var row = _.first(bindingData, { '$$index': rowId }) || {};
+                    func({ dom: data, col: col, colId: colId, row: row });
+                });
             }; break;
         }
     };
+
     mcGrid.on = function (eventName, func) {
         $eventStore[eventName] !== null && ($eventStore[eventName].push(func))
     };
 
 
     mcGrid.InitGrid = function (tableId, config, col, data) {
+        //重置配置项
         defColConfig = col;
         processingData(data);
         processingConfig(config);
@@ -75,12 +79,11 @@ function mcGrid() {
         //var headTable = createElement('table', theadTxt, defaultClassName.table);
         var tbodyTxt = buildTbody(defColConfig, data);
         var sortableClass = '';
-        if(defaultConfig.sortable == true)
-        {
+        if (defaultConfig.sortable == true) {
             sortableClass = ' sortable'
         }
 
-        var bodyTable = createElementTxt('table', theadTxt + tbodyTxt, defaultClassName.table + sortableClass , { width: defaultConfig.width });
+        var bodyTable = createElementTxt('table', theadTxt + tbodyTxt, defaultClassName.table + sortableClass, { width: defaultConfig.width });
         //var tableTxt = buildTable(defColConfig, data);
         wrapPart.bodyDivDom.innerHTML = bodyTable;
         appendStragy(wrapPart);
@@ -98,7 +101,7 @@ function mcGrid() {
         //重置默认设置
         _.extend(defaultConfig, config);
         //处理非法情况
-        defaultConfig.fixColumnNum =  defaultConfig.fixColumnNum | 0;
+        defaultConfig.fixColumnNum = defaultConfig.fixColumnNum | 0;
         defaultConfig.isCheckedByRow = !!defaultConfig.isCheckedByRow;
         defaultConfig.isSingleRowSelected = !!defaultConfig.isSingleRowSelected;
         //设置表格默认样式
@@ -113,19 +116,19 @@ function mcGrid() {
     var processingData = function (data) {
         _.forEach(data, function (item, i) {
             item.$$index = i;
-            item.$$checked = false;
-        })
+            //item.$$checked = false;
+        });
         bindingData = data || [];
     }
     //获取列配置的 样式
     var getStyle = function (col) {
         var styleStr = [];
-        var allowedStyle = ['min-width','width', 'text-align'];
+        var allowedStyle = ['min-width', 'width', 'max-width', 'text-align', "white-space", "overflow", "text-overflow"];
         _.forEach(allowedStyle, function (i) {
             if (col[i] != null) {
                 styleStr.push(i + ':' + col[i]);
             }
-        })
+        });
 
         return styleStr.join(';');
     }
@@ -148,26 +151,27 @@ function mcGrid() {
     var frozenRowColumn = function (parentDom, wrapPart) {
         var headDivDom = wrapPart.headDivDom;
         var bodyDivDom = wrapPart.bodyDivDom;
-        //设置行列的款度
+        //设置行列的宽度
         var allTable = bodyDivDom.querySelectorAll('table');
         allTable.forEach(function (item) {
             item.style.width = item.offsetWidth + 'px';
-        })
+        });
         var allTd = bodyDivDom.querySelectorAll('table td');
         var allTh = bodyDivDom.querySelectorAll('table th');
         allTd.forEach(function (item) {
             item.style.width = item.offsetWidth + 'px';
+            item.title = item.textContent;
             //初始化所有Td的事件，可以提供给客户端做相应设置
-            mcGrid.fire('TdInitialize', item)
-        })
+            mcGrid.fire('TdInitialize', item);
+        });
         allTh.forEach(function (item) {
             item.style.width = item.offsetWidth + 'px';
-        })
+        });
         //合并行
         mergeRow(bodyDivDom);
         if (defaultConfig.fixHeaderRow && bindingData.length > 0) {
             var bodyDivDomTable = bodyDivDom.children[0];
-            var theadHeight =  bodyDivDomTable.querySelector('table thead').offsetHeight;
+            //var theadHeight = bodyDivDomTable.querySelector('table thead').offsetHeight;
             var headerHeight = bodyDivDomTable.children[0].offsetHeight;
             var bodyHeight = parentDom.offsetHeight - headerHeight;
 
@@ -175,21 +179,15 @@ function mcGrid() {
             //删除Body部分 留下Header
             headDivDomTable.removeChild(headDivDomTable.children[1]);
             //删除Header部分
-            //bodyDivDomTable.removeChild(bodyDivDomTable.children[0]);
-            //bodyDivDomTable.style.marginTop = '-' + (headerHeight + 1) + 'px';
             headDivDom.appendChild(headDivDomTable);
 
             bodyDivDom.style.height = bodyHeight + 'px';
-
-            //var tempWidth = bodyDivDom.offsetWidth > bodyDivDomTable.offsetWidth ? bodyDivDom.offsetWidth : bodyDivDomTable.offsetWidth;
-            //bodyDivDomTable.style.width = tempWidth + 'px';
-            //headDivDomTable.style.width = tempWidth;
         }
         //构造冻结固定列
         if (defaultConfig.fixHeaderRow && defaultConfig.fixColumnNum > 0 && bindingData.length > 0) {
             var fixedBodyMcThead = parentDom.querySelector('.mc-fixed-body .mc-thead');
             var fixedBodyMcTbody = parentDom.querySelector('.mc-fixed-body .mc-tbody');
-            var bottomTheadTable = fixedBodyMcThead.querySelector('table');
+            //var bottomTheadTable = fixedBodyMcThead.querySelector('table');
             var bottomTbodyTable = fixedBodyMcTbody.querySelector('table');
             var leftMcThead = fixedBodyMcThead.cloneNode(true);
             var leftMcTbody = fixedBodyMcTbody.cloneNode(true);
@@ -202,11 +200,14 @@ function mcGrid() {
                 //重组左侧头部
                 var trs = leftTheadTable.rows;
                 _.forEach(trs, function (item, j) {
+                    var preRemove = [];
                     for (var i = 0; i < item.cells.length; i++) {
                         var ci = item.cells[i].getAttribute("ci");
                         if (ci >= defaultConfig.fixColumnNum) {
                             item.cells[i].style.display = "none";
                         } else {
+                            item.cells[i].style["min-width"] = null;
+                            item.cells[i].style["max-width"] = null;
                             item.cells[i].style.width = bottomTbodyTable.rows[j].cells[i].offsetWidth + 'px';
                             item.cells[i].style.height = bottomTbodyTable.rows[j].cells[i].offsetHeight + 'px';
                         }
@@ -220,16 +221,21 @@ function mcGrid() {
                         if (ci >= defaultConfig.fixColumnNum) {
                             item.cells[i].style.display = "none";
                         } else {
+                            item.cells[i].style["min-width"] = null;
+                            item.cells[i].style["max-width"] = null;
                             item.cells[i].style.width = bottomTbodyTable.rows[j].cells[i].offsetWidth + 'px';
                             item.cells[i].style.height = bottomTbodyTable.rows[j].cells[i].offsetHeight + 'px';
                         }
+
                     }
-                })
+                });
                 leftTheadTable.style.width = null;
                 leftTbodyTable.style.width = null;
+                leftTheadTable.style["table-layout"] = 'auto';
+                leftTbodyTable.style["table-layout"] = 'auto';
                 leftMcTbody.style.width = null;
                 //wrapPart.fixedBody.style.width = fixedBodyMcTbody.offsetWidth + 'px';
-                //leftMcTbody.style.width = fixedBodyMcTbody.clientHeight + 'px';
+                //                leftMcTbody.style.width = fixedBodyMcTbody.clientHeight + 'px';
                 leftMcTbody.style.height = fixedBodyMcTbody.clientHeight + 'px';
             }, 0);
 
@@ -269,7 +275,7 @@ function mcGrid() {
                         tr.removeClass('hover');
                     }
                 }
-            })
+            });
         }
 
         _.forEach(allTr, function (tr) {
@@ -302,42 +308,41 @@ function mcGrid() {
                 allTdCheckbox.forEach(function (cbtd) {
                     var cb = cbtd.querySelector('input[type=checkbox]');
                     cb.checked = checked;
-                })
+                });
 
-            })
+            });
             //更新Tr被选中的样式
             var allDataRow = parentDom.getElementsByTagName('tr').filter(function (item) {
                 return item.getAttribute('ri') !== '-1';
-            })
+            });
             allDataRow.forEach(function (item) {
                 if (checked) {
                     item.addClass('checked');
                 } else {
                     item.removeClass('checked');
                 }
-            })
+            });
 
             //更新所有数据被选中的标记
             bindingData.forEach(function (item) {
                 item.$$checked = checked;
-            })
-
+            });
         }
         //选中单行
-        function checkSingleTr(trDom, checkboxDom){
+        function checkSingleTr(trDom, checkboxDom) {
             var tr = trDom;
             var rowIndex = tr.getAttribute('ri');
             var rowData = _.first(bindingData, { $$index: rowIndex });
             var checked = false;
-            (checkboxDom != null) ?( checked = checkboxDom.checked): (checked = !rowData.$$checked);
+            (checkboxDom != null) ? (checked = checkboxDom.checked) : (checked = !rowData.$$checked);
 
             //若为单选则全部设为不选择
-            if(defaultConfig.isSingleRowSelected){
+            if (defaultConfig.isSingleRowSelected) {
                 checkAllTr(false);
             }
             var checkedRow = parentDom.querySelectorAll('tr[ri="' + rowIndex + '"]');
             checkedRow.forEach(function (trItem) {
-                if(defaultConfig.checkable) {
+                if (defaultConfig.checkable) {
                     //更新checkbox 选中
                     var cbb = trItem.querySelector('input[type=checkbox]');
                     cbb.checked = checked;
@@ -348,41 +353,40 @@ function mcGrid() {
                 } else {
                     trItem.removeClass('checked');
                 }
-            })
+            });
             rowData.$$checked = checked;
-            mcGrid.fire('RowChecked');
+            mcGrid.fire('RowChecked', rowData);
         }
 
         //CheckBox
         if (defaultConfig.checkable === true) {
-
             //单个选项框选中
             allTdCheckbox.forEach(function (cbtd) {
                 var cb = cbtd.querySelector('input[type=checkbox]');
-                var trDom = cbtd.parentTag('tr')
+                var trDom = cbtd.parentTag('tr');
                 cb['onchange'] = function () {
                     checkSingleTr(trDom, cb);
                 }
-            })
+            });
             //绑定选中状态变化
             checkAllBox.forEach(function (cabth) {
                 var cb = cabth.querySelector('input[type=checkbox]');
                 cb['onchange'] = function () {
                     checkAllTr(this.checked);
-                    mcGrid.fire('RowChecked');
+                    mcGrid.fire('RowChecked', bindingData);
                 }
-            })
+            });
         }
         //单行选择
-        if(defaultConfig.isSingleRowSelected == true && defaultConfig.isCheckedByRow === true){
+        if (defaultConfig.isSingleRowSelected == true && defaultConfig.isCheckedByRow === true) {
             var allTrDom = parentDom.getElementsByTagName('tr').filter(function (item) {
-                return  item.getAttribute('ri') !== '-1';
+                return item.getAttribute('ri') !== '-1';
             });
-            allTrDom.forEach(function(trDom){
-                trDom['onclick'] = function(){
+            allTrDom.forEach(function (trDom) {
+                trDom['onclick'] = function () {
                     checkSingleTr(trDom);
                 }
-            })
+            });
         }
 
 
@@ -399,24 +403,24 @@ function mcGrid() {
                     thDom.removeClass('sort-down');
                     if (cid == colId) {
                         ascending == true ? thDom.addClass('sort-up') : thDom.addClass('sort-down');
-                        defaultConfig.$$orderByCol = _.first(defColConfig, {$$index: colId});
+                        defaultConfig.$$orderByCol = _.first(defColConfig, { $$index: colId });
                         defaultConfig.orderBy = defaultConfig.$$orderByCol.name;
                         defaultConfig.ascending = ascending;
                     }
-                })
+                });
             };
             var sortColId = 0;
             //处理 orderBy, ascending 异常的情况
-            if(defaultConfig.orderBy != null){
-                var sortCol = _.first(defColConfig, { name: defaultConfig.orderBy})
-                if(sortCol != null){
+            if (defaultConfig.orderBy != null) {
+                var sortCol = _.first(defColConfig, { name: defaultConfig.orderBy });
+                if (sortCol != null) {
                     sortColId = sortCol.$$index;
-                }else{ sortColId = 0; defaultConfig.orderBy = defColConfig[0].name;}
-            }else { sortColId = 0; defaultConfig.orderBy = defColConfig[0].name; }
-            defaultConfig.ascending = !!defaultConfig.ascending
+                } else { sortColId = 0; defaultConfig.orderBy = defColConfig[0].name; }
+            } else { sortColId = 0; defaultConfig.orderBy = defColConfig[0].name; }
+            defaultConfig.ascending = !!defaultConfig.ascending;
 
             //初始化
-            defColConfig.orderBy != null ||  _.first(defColConfig, { name: defaultConfig.orderBy})
+            defColConfig.orderBy != null || _.first(defColConfig, { name: defaultConfig.orderBy })
             sortProperty(sortColId, defaultConfig.ascending);
 
             //列排序
@@ -424,14 +428,13 @@ function mcGrid() {
                 thDom['onclick'] = function () {
                     var colId = this.getAttribute('ci')
                     var setAscending = true;
-                    if(colId == defaultConfig.$$orderByCol.$$index){
+                    if (colId == defaultConfig.$$orderByCol.$$index) {
                         setAscending = !defaultConfig.ascending;
                     }
-                    sortProperty(colId,  setAscending);
+                    sortProperty(colId, setAscending);
                     mcGrid.fire('SortChanged', colId);
                 }
-            })
-
+            });
         }
     }
 
@@ -458,7 +461,7 @@ function mcGrid() {
         }
         (ci !== undefined && (ci = ' ci="' + ci + '" ')) || (ci === undefined && (ci = ''));
         (ri !== undefined && (ri = ' ri="' + ri + '" ')) || (ri === undefined && (ri = ''));
-        content = content == null ? '': content;
+        content = content == null ? '' : content;
         var eleDom = '<' + element + cls + ri + ci + style + '>' + content + '</' + element + '>';
         return eleDom;
     }
@@ -479,7 +482,7 @@ function mcGrid() {
         var tableHeadDom = createElementTxt('thead', trDom);
         return tableHeadDom;
     }
-       //构建表格数据
+    //构建表格数据
     var buildTbody = function (cols, rows) {
         var tdDomList = [];
         var trDomList = [];
@@ -489,11 +492,14 @@ function mcGrid() {
                 if (item.visible)
                     tdDomList.push(createElementTxt('td', r[item.name], null, item, r.$$index, item.$$index));
             })
+            var checkedStr = "";
+            if (r.$$checked === true)
+                checkedStr = "checked";
             if (defaultConfig.checkable) {
-                var checkBoxTxt = createElementTxt('td', "<input type='checkbox'/>", 'check-btn', null, r.$$index, -1)
+                var checkBoxTxt = createElementTxt('td', "<input type='checkbox' " + checkedStr + "/>", 'check-btn', null, r.$$index, -1)
                 tdDomList.unshift(checkBoxTxt);
             }
-            trDomList.push(createElementTxt('tr', tdDomList.join(''), null, null, r.$$index));
+            trDomList.push(createElementTxt('tr', tdDomList.join(''), checkedStr, null, r.$$index));
         });
         //if (trDomList.length == 0) {
         //    trDomList.push(createElementTxt('tr', '<td colspan="1000"></td>', null, null, 0));
@@ -551,13 +557,13 @@ function mcGrid() {
     function transformRows(bodyDivDom, rowConfig) {
         //格式化mergeColumns字段
         var collist = [];
-        defaultConfig.mergeColumns.forEach(function(item){ collist.push((item|0));});
+        defaultConfig.mergeColumns.forEach(function (item) { collist.push((item | 0)); });
         collist = collist.sort(function (a, b) {
             return a > b;
         });
-        var allTr = bodyDivDom.querySelectorAll('tr').filter(function (item) {
+        var allTr = bodyDivDom.querySelectorAll('tr').filter(function(item) {
             return item.getAttribute('ri') !== '-1';
-        })
+        });
 
         function getRowSpanCount(rowId, colId, rowConfig) {
             colId = parseInt(colId);
@@ -726,7 +732,7 @@ function mcGrid() {
         throw new Error("Unable to copy obj! Its type isn't supported.");
     }
 
-//公共基础类
+    //公共基础类
     NodeList.prototype.forEach = HTMLCollection.prototype.forEach = Array.prototype.forEach = function (func) {
         _.forEach(this, function (item, rowId) {
             func(item, rowId);
@@ -759,7 +765,7 @@ function mcGrid() {
         removed = removed.replace(/(^\s+)|(\s+$)/g, '');//去掉首尾空格. ex) 'bcd ' -> 'bcd'
         obj.className = removed;//替换原来的 class.
     }
-    Element.prototype.remove = function(){
+    Element.prototype.remove = function () {
         this.parentNode.removeChild(this);
     }
     Element.prototype.hasClass = function (cls) {
@@ -794,4 +800,3 @@ function mcGrid() {
         return (obj | 0) === obj;
     }
 };
-
